@@ -1,12 +1,13 @@
 plugins {
-    kotlin("jvm") version "1.9.22"
-    id("org.jetbrains.compose") version "1.6.0"
+    kotlin("jvm") version "2.0.20"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.20" // Обязателен для Kotlin 2.0+
+    id("org.jetbrains.compose") version "1.7.3"
 }
 
 repositories {
+    google()
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-    google()
 }
 
 dependencies {
@@ -14,8 +15,12 @@ dependencies {
     implementation(compose.material3)
 }
 
-kotlin { jvmToolchain(17) }
+kotlin {
+    jvmToolchain(17)
+}
 
 compose.desktop {
-    application { mainClass = "racing.MainKt" }
+    application {
+        mainClass = "racing.MainKt"
+    }
 }
