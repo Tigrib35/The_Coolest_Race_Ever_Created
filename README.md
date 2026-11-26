@@ -79,7 +79,7 @@
 
 ```bash
 # 1. Клонируем репозиторий
-git clone https://github.com/your-team/la-grande-course.git
+https://github.com/Tigrib35/The_Coolest_Race_Ever_Created
 cd la-grande-course
 
 # 2. Открываем в Godot 4.x
