@@ -17,21 +17,29 @@ fun PlayerUp(player: Player, onDismiss: () -> Unit) {
                 Text("Ур. ${player.level}  ${player.exp}/${player.expNext}")
                 Text("Монеты: ${player.coins}")
                 Spacer(Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
+
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
                     Text("Реакция ${player.reaction}")
-                    Button(onClick = { player.upReaction() }) {
-                        Text("${player.reactionCost()}")
-                    }
+                    Button(
+                        onClick = { player.tryUpgradeReaction() },
+                        enabled = player.coins >= player.reactionCost,
+                    ) { Text("${player.reactionCost}") }
                 }
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
+
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
                     Text("Управление ${player.handling}")
-                    Button(onClick = { player.upHandling() }) {
-                        Text("${player.handlingCost()}")
-                    }
+                    Button(
+                        onClick = { player.tryUpgradeHandling() },
+                        enabled = player.coins >= player.handlingCost,
+                    ) { Text("${player.handlingCost}") }
                 }
             }
-        }
+        },
     )
 }

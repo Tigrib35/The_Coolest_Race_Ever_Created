@@ -9,14 +9,16 @@ class Player {
     var exp by mutableIntStateOf(0)
     var level by mutableIntStateOf(1)
     var expNext by mutableIntStateOf(100)
-
     var handling by mutableIntStateOf(1)
     var reaction by mutableIntStateOf(1)
 
     val car = Car()
 
-    fun addExp(n: Int) {
-        exp += n
+    val handlingCost: Int get() = 100 * handling
+    val reactionCost: Int get() = 100 * reaction
+
+    fun gainExp(amount: Int) {
+        exp += amount
         while (exp >= expNext) {
             exp -= expNext
             level++
@@ -25,18 +27,17 @@ class Player {
         }
     }
 
-    fun handlingCost() = 100 * handling
-    fun reactionCost() = 100 * reaction
-
-    fun upHandling(): Boolean {
-        val c = handlingCost()
-        if (coins < c) return false
-        coins -= c; handling++; return true
+    fun tryUpgradeHandling(): Boolean {
+        if (coins < handlingCost) return false
+        coins -= handlingCost
+        handling++
+        return true
     }
 
-    fun upReaction(): Boolean {
-        val c = reactionCost()
-        if (coins < c) return false
-        coins -= c; reaction++; return true
+    fun tryUpgradeReaction(): Boolean {
+        if (coins < reactionCost) return false
+        coins -= reactionCost
+        reaction++
+        return true
     }
 }

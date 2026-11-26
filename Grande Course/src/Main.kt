@@ -8,13 +8,17 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 
-enum class Screen { GARAGE, MODE, RACE }
+private sealed interface Screen {
+    data object Garage : Screen
+    data object ModePick : Screen
+    data class InRace(val mode: RaceMode) : Screen
+}
 
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
         title = "Racing",
-        state = rememberWindowState(width = 1280.dp, height = 800.dp)
+        state = rememberWindowState(width = 1280.dp, height = 800.dp),
     ) {
         MaterialTheme(colorScheme = darkColorScheme()) { App() }
     }
@@ -23,28 +27,35 @@ fun main() = application {
 @Composable
 private fun App() {
     val player = remember { Save.load() }
-    var screen by remember { mutableStateOf(Screen.GARAGE) }
-    var mode by remember { mutableStateOf(RaceMode.TIME) }
+    var screen: Screen by remember { mutableStateOf(Screen.Garage) }
 
     LaunchedEffect(
-        player.coins, player.level, player.exp,
+        player.coins, player.exp, player.level, player.expNext,
         player.handling, player.reaction,
-        player.car.engine, player.car.tires, player.car.brakes
+        player.car.engine, player.car.tires, player.car.brakes,
     ) {
         Save.save(player)
     }
 
-    when (screen) {
-        Screen.GARAGE -> Garage(player) { screen = Screen.MODE }
-        Screen.MODE -> Mode(
-            onBack = { screen = Screen.GARAGE },
-            onPick = { m -> mode = m; screen = Screen.RACE }
+    when (val current = screen) {
+        Screen.Garage -> GarageScreen(
+            player = player,
+            onPlay = { screen = Screen.ModePick },
         )
-        Screen.RACE -> Race(player, mode) { reward, exp ->
-            player.coins += reward
-            player.addExp(exp)
-            Save.save(player)
-            screen = Screen.GARAGE
-        }
+
+        Screen.ModePick -> ModeScreen(
+            onBack = { screen = Screen.Garage },
+            onPick = { screen = Screen.InRace(it) },
+        )
+
+        is Screen.InRace -> RaceScreen(
+            player = player,
+            mode = current.mode,
+            onFinish = { reward, exp ->
+                player.coins += reward
+                player.gainExp(exp)
+                screen = Screen.Garage
+            },
+        )
     }
 }

@@ -9,11 +9,11 @@ class Car {
     var tires by mutableIntStateOf(1)
     var brakes by mutableIntStateOf(1)
 
-    fun engineCost() = 150 * engine
-    fun tiresCost() = 120 * tires
-    fun brakesCost() = 100 * brakes
+    val engineCost: Int get() = 150 * engine
+    val tiresCost: Int get() = 120 * tires
+    val brakesCost: Int get() = 100 * brakes
 
-    fun maxSpeed() = 240f + engine * 40f
-    fun grip() = 0.9f + tires * 0.1f
-    fun brakeForce() = 400f + brakes * 60f
+    val maxSpeed: Float get() = 240f + engine * 40f
+    val grip: Float get() = 0.9f + tires * 0.1f
+    val brakeForce: Float get() = 400f + brakes * 60f
 }
