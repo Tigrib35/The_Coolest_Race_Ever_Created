@@ -11,7 +11,8 @@ import androidx.compose.ui.window.rememberWindowState
 private sealed interface Screen {
     data object Garage : Screen
     data object ModePick : Screen
-    data class InRace(val mode: RaceMode) : Screen
+    data class TrackPick(val mode: RaceMode) : Screen
+    data class InRace(val mode: RaceMode, val track: Track) : Screen
 }
 
 fun main() = application {
@@ -45,12 +46,20 @@ private fun App() {
 
         Screen.ModePick -> ModeScreen(
             onBack = { screen = Screen.Garage },
-            onPick = { screen = Screen.InRace(it) },
+            onPick = { screen = Screen.TrackPick(it) },   // ← ведём на выбор трассы
+        )
+
+        is Screen.TrackPick -> TrackSelectScreen(
+            player = player,
+            mode = current.mode,
+            onBack = { screen = Screen.ModePick },
+            onPick = { track -> screen = Screen.InRace(current.mode, track) },
         )
 
         is Screen.InRace -> RaceScreen(
             player = player,
             mode = current.mode,
+            track = current.track,
             onFinish = { reward, exp ->
                 player.coins += reward
                 player.gainExp(exp)

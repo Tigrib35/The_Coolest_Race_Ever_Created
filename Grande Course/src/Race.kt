@@ -19,14 +19,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.sin
 
 @Composable
-fun RaceScreen(player: Player, mode: RaceMode, onFinish: (reward: Int, exp: Int) -> Unit) {
-    val engine = remember {
+fun RaceScreen(
+    player: Player,
+    mode: RaceMode,
+    track: Track,
+    onFinish: (reward: Int, exp: Int) -> Unit,
+) {
+    val engine = remember(track.id, mode) {
         Engine(
             maxSpeed = player.car.maxSpeed + player.reaction * 6f,
             grip = player.car.grip + player.handling * 0.05f,
             braking = player.car.brakeForce,
+            track = track,
         ).apply { init(withBots = mode == RaceMode.BOTS) }
     }
 
@@ -41,7 +48,6 @@ fun RaceScreen(player: Player, mode: RaceMode, onFinish: (reward: Int, exp: Int)
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    // Игровой цикл на частоте кадров
     LaunchedEffect(Unit) {
         var lastFrameNs = 0L
         var hasPrevious = false
@@ -88,13 +94,14 @@ fun RaceScreen(player: Player, mode: RaceMode, onFinish: (reward: Int, exp: Int)
                 true
             },
     ) {
-        RaceCanvas(engine, hudProgress)
+        RaceCanvas(engine, track, hudProgress)
 
         Column(Modifier.align(Alignment.TopStart).padding(20.dp)) {
+            HudText(track.name)
             HudText("Время: ${fmt(hudTime)} с")
             HudText("Скорость: ${hudSpeed.toInt()}")
             if (mode == RaceMode.BOTS) HudText("Место: $hudRank / 4")
-            HudText("Дистанция: ${hudProgress.toInt()} / ${Engine.TRACK_LENGTH.toInt()} м")
+            HudText("Дистанция: ${hudProgress.toInt()} / ${track.length.toInt()} м")
         }
 
         Text(
@@ -110,15 +117,17 @@ fun RaceScreen(player: Player, mode: RaceMode, onFinish: (reward: Int, exp: Int)
         ) { Text("Выход") }
 
         if (finished) {
-            val reward = when (mode) {
+            val baseReward = when (mode) {
                 RaceMode.TIME -> 100 + max(0, 200 - hudTime.toInt())
                 RaceMode.BOTS -> 100 + (4 - hudRank) * 75
             }
-            val exp = 40 + (4 - hudRank) * 15
+            val reward = (baseReward * track.rewardMultiplier).toInt()
+            val baseExp = 40 + (4 - hudRank) * 15
+            val exp = (baseExp * track.rewardMultiplier).toInt()
 
             AlertDialog(
                 onDismissRequest = {},
-                title = { Text("Финиш") },
+                title = { Text("Финиш — ${track.name}") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Время: ${fmt(hudTime)} с")
@@ -142,29 +151,33 @@ private fun HudText(text: String) {
 }
 
 @Composable
-private fun RaceCanvas(engine: Engine, progress: Float) {
+private fun RaceCanvas(engine: Engine, track: Track, progress: Float) {
+    val theme = track.theme
     Canvas(Modifier.fillMaxSize()) {
-        drawRect(Color(0xFF263238))
+        drawRect(theme.ambient)
 
-        // Разметка «дороги» — скроллится по прогрессу
+        // Визуальный изгиб для «извилистых» трасс
+        val curve = if (theme.hasCurves) sin(progress * 0.004f) * 90f else 0f
+        val centerX = size.width / 2 + curve
+
+        // Разметка
         val scroll = progress % 120f
         var y = -120f + scroll
         while (y < size.height) {
-            drawRect(Color.White, Offset(size.width / 2 - 4f, y), Size(8f, 60f))
+            drawRect(theme.marking, Offset(centerX - 4f, y), Size(8f, 60f))
             y += 120f
         }
 
-        val centerX = size.width / 2
         val playerScreenY = size.height * 0.75f
         val pxPerMeter = 2f
 
-        // Боты — в координатах относительно игрока
+        // Боты
         engine.bots.forEach { bot ->
             val relative = -bot.y - progress
             val botScreenY = playerScreenY - relative * pxPerMeter - 28f
             if (botScreenY in -60f..(size.height + 60f)) {
                 drawRoundRect(
-                    Color(0xFF1E88E5),
+                    theme.accent,
                     Offset(centerX + bot.laneX - 16f, botScreenY),
                     Size(32f, 56f),
                     CornerRadius(8f, 8f),
@@ -172,7 +185,7 @@ private fun RaceCanvas(engine: Engine, progress: Float) {
             }
         }
 
-        // Игрок — центр, с учётом бокового смещения
+        // Игрок
         val playerOffsetX = engine.x.coerceIn(-350f, 350f)
         drawRoundRect(
             Color(0xFFE53935),

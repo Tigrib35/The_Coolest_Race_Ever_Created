@@ -3,21 +3,16 @@ package racing
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * Физика заезда. Игрок стартует в (0,0), при angle=0 смотрит «вверх» экрана,
- * прогресс = продвижение по трассе вперёд.
- */
 class Engine(
-    private val maxSpeed: Float,
-    private val grip: Float,
-    private val braking: Float,
+    maxSpeed: Float,
+    grip: Float,
+    braking: Float,
+    val track: Track,
 ) {
-    companion object {
-        const val TRACK_LENGTH = 5000f
-        private const val ACCELERATION = 300f
-        private const val COAST_DECELERATION = 80f
-        private const val MAX_STEP = 0.05f
-    }
+    private val maxSpeed = maxSpeed
+    private val grip = grip * track.gripMultiplier           // ← модификатор сцепления
+    private val braking = braking
+    private val trackLength = track.length                   // ← длина из карты
 
     var x = 0f
         private set
@@ -49,22 +44,24 @@ class Engine(
         progress = 0f; elapsed = 0f; finished = false
         _bots.clear()
         if (withBots) {
-            // Медленный — на старте, средний — чуть впереди, быстрый — дальше всех
-            _bots += Bot(-100f, 0f, 0f, 0.80f)
-            _bots += Bot(0f, -40f, 0f, 0.87f)
-            _bots += Bot(100f, -80f, 0f, 0.94f)
+            // Сложность карты сдвигает скорость ботов вверх
+            val bonus = (track.difficulty - 1) * 0.03f
+            fun factor(base: Float) = (base + bonus).coerceIn(0f, 1.05f)
+            _bots += Bot(-100f, 0f, 0f, factor(0.80f))
+            _bots += Bot(0f, -40f, 0f, factor(0.87f))
+            _bots += Bot(100f, -80f, 0f, factor(0.94f))
         }
     }
 
     fun update(dt: Float, throttle: Float, steer: Float) {
         if (finished) return
-        val step = dt.coerceAtMost(MAX_STEP)
+        val step = dt.coerceAtMost(0.05f)
         elapsed += step
 
         speed = when {
-            throttle > 0f -> speed + ACCELERATION * step
+            throttle > 0f -> speed + 300f * step
             throttle < 0f -> speed - braking * step
-            else -> speed - COAST_DECELERATION * step
+            else -> speed - 80f * step
         }.coerceIn(0f, maxSpeed)
 
         angle += steer * grip * (speed / maxSpeed + 0.2f) * 2.5f * step
@@ -74,7 +71,7 @@ class Engine(
         y -= forward
         progress += forward
 
-        if (progress >= TRACK_LENGTH) finished = true
+        if (progress >= trackLength) finished = true
 
         _bots.forEach { bot ->
             val target = maxSpeed * bot.speedFactor
